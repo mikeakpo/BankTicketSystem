@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bank ticket system</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e9eef3;--surface:#fff;--ink:#14232f;--muted:#5c6f7d;--line:#c3cfd9;--item:#0f6b73;--item-ink:#fff;--accent:#e0561f;--free:#0f6b73;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a22;--surface:#17252f;--ink:#e7eef3;--muted:#93a6b4;--line:#2c4150;--item:#3cc0c8;--item-ink:#08242a;--accent:#ff8a57;--free:#3cc0c8;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1a22;--surface:#17252f;--ink:#e7eef3;--muted:#93a6b4;--line:#2c4150;--item:#3cc0c8;--item-ink:#08242a;--accent:#ff8a57;--free:#3cc0c8;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:clamp(1.8rem,7vw,2.8rem);line-height:1.05;margin:0 0 6px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.05rem;margin:0 0 8px}
+.sub{margin:0 0 18px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select{flex:1 1 110px;min-width:0;padding:11px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px}
+button{font:inherit;font-weight:600;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--item);outline-offset:2px}
+.msg{min-height:1.4em;margin:8px 0 0;font-weight:600;color:var(--accent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;min-height:46px;align-items:center;padding:8px;background:var(--bg);border-radius:10px}
+.chip{background:var(--item);color:var(--item-ink);border-radius:8px;padding:6px 10px;font-weight:700;font-size:.9rem}
+.chip small{font-weight:400;margin-left:4px}
+.chip.front{outline:3px solid var(--accent)}
+.empty{color:var(--muted);font-size:.9rem}
+.stats{display:flex;gap:18px;flex-wrap:wrap}
+.stats b{font-weight:800}
+.board{display:flex;flex-direction:row;flex-wrap:nowrap;gap:10px;overflow-x:auto;padding-bottom:4px}
+.board .slot{flex:1 0 200px}
+.slot{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
+.slot.busy{border-color:var(--accent)}
+.slot h3{margin:0;font-size:.95rem}
+.slot .st{font-weight:800;color:var(--free)}
+.slot.busy .st{color:var(--accent)}
+.slot small{display:block;color:var(--muted);min-height:1.4em}
+.slot button{margin-top:8px;padding:8px 10px;font-size:.9rem}
+ol{margin:0;padding:0;list-style:none;display:grid;gap:5px;max-height:170px;overflow-y:auto}
+li{padding:7px 10px;background:var(--bg);border-radius:8px;font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bank ticket system</h1>
+  <p class="sub">One queue and a live view of every counter.</p>
+
+  <section class="panel" aria-label="Take a ticket">
+    <h2>Take a ticket</h2>
+    <div class="row">
+      <input id="name" placeholder="Customer name" maxlength="12" aria-label="Customer name">
+      <select id="svc" aria-label="Service"></select>
+      <input id="req" placeholder="Type your request" maxlength="60" aria-label="Type your request">
+      <button class="primary" id="issue">Take ticket</button>
+    </div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+  </section>
+
+  <section class="panel" aria-label="Serve customers">
+    <div class="row">
+      <button class="primary" id="next">Call next customer</button>
+      <button id="auto">Auto run</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Counters">
+    <h2>Counters</h2>
+    <div class="board" id="board"></div>
+  </section>
+
+  <section class="panel"><h2>Waiting queue</h2><div class="chips" id="qr"></div></section>
+
+  <section class="panel">
+    <h2>Summary</h2>
+    <div class="stats">
+      <span>Waiting <b id="sw">0</b></span>
+      <span>Tickets taken <b id="st">0</b></span>
+      <span>Served <b id="ss">0</b></span>
+      <span>Counters occupied <b id="co">0</b></span>
+      <span>Counters free <b id="ce">0</b></span>
+    </div>
+  </section>
+
+  <section class="panel"><h2>Activity</h2><ol id="log"></ol></section>
+</main>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var SERVICES = ['Deposit', 'Withdrawal', 'Loan enquiry', 'Open account'];
+  var rq = [], rn = 1, served = 0, timer = null;
+  var counters = [1,2,3].map(function(i){ return {id:i, cur:null}; });
+
+  SERVICES.forEach(function(s, i){
+    var o = document.createElement('option'); o.value = i; o.textContent = s; $('svc').appendChild(o);
+  });
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function log(t){ var li = document.createElement('li'); li.textContent = t; $('log').insertBefore(li, $('log').firstChild); }
+  function say(t){ $('msg').textContent = t; }
+
+  function render(){
+    var q = $('qr'); q.innerHTML = '';
+    if (!rq.length){ var e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Empty'; q.appendChild(e); }
+    rq.forEach(function(c, i){
+      var d = document.createElement('div'); d.className = 'chip' + (i === 0 ? ' front' : ''); d.textContent = c.no;
+      var s = document.createElement('small'); s.textContent = c.name; d.appendChild(s); q.appendChild(d);
+    });
+    var occ = counters.filter(function(c){ return c.cur; }).length;
+    $('sw').textContent = rq.length; $('st').textContent = rn - 1; $('ss').textContent = served;
+    $('co').textContent = occ; $('ce').textContent = counters.length - occ;
+
+    var box = $('board'); box.innerHTML = '';
+    counters.forEach(function(c){
+      var d = document.createElement('div'); d.className = 'slot' + (c.cur ? ' busy' : '');
+      var h = document.createElement('h3'); h.textContent = 'Counter ' + c.id; d.appendChild(h);
+      var st = document.createElement('div'); st.className = 'st'; st.textContent = c.cur ? 'Occupied' : 'Free'; d.appendChild(st);
+      var sm = document.createElement('small');
+      sm.textContent = c.cur ? c.cur.no + ' · ' + c.cur.name + ' · ' + SERVICES[c.cur.s] + (c.cur.req ? ': ' + c.cur.req : '') : 'Ready for the next customer';
+      d.appendChild(sm);
+      if (c.cur){
+        var b = document.createElement('button'); b.textContent = 'Finish'; b.onclick = function(){ finish(c); }; d.appendChild(b);
+      }
+      box.appendChild(d);
+    });
+  }
+
+  function call(c){
+    var cust = rq.shift();   // dequeue from the front
+    if (!cust) return false;
+    c.cur = cust;
+    log(cust.no + ' ' + cust.name + ' called to counter ' + c.id);
+    render(); return true;
+  }
+  function callNext(){
+    var free = counters.filter(function(c){ return !c.cur; })[0];
+    if (!rq.length){ say('The queue is empty. Take a ticket first.'); return; }
+    if (!free){ say('All counters are occupied. Finish a customer first.'); return; }
+    say(''); call(free);
+  }
+  function finish(c){
+    log(c.cur.no + ' finished at counter ' + c.id); served++; c.cur = null; render();
+  }
+  $('issue').onclick = function(){
+    var cust = {no: 'T' + pad(rn++), name: $('name').value.trim() || 'Guest', s: parseInt($('svc').value, 10), req: $('req').value.trim()};
+    rq.push(cust);   // enqueue at the rear
+    log(cust.no + ' ' + cust.name + ' joined the queue');
+    $('name').value = ''; $('req').value = ''; say('Ticket ' + cust.no + ' issued.'); render();
+  };
+  $('next').onclick = callNext;
+  $('auto').onclick = function(){
+    if (timer){ clearInterval(timer); timer = null; $('auto').textContent = 'Auto run'; return; }
+    $('auto').textContent = 'Pause';
+    timer = setInterval(function(){
+      counters.forEach(function(c){
+        if (c.cur){ if (Math.random() < 0.5) finish(c); }
+        else if (rq.length) call(c);
+      });
+    }, 1500);
+  };
+  render();
+})();
+</script>
+</body>
+</html>
